@@ -22,7 +22,7 @@ if [ "$VERIFIED" != true ]; then
 fi
 
 # Files that landed on main since this PR's merge base, as modules.
-main_mods=$(gh api "repos/$REPO/compare/${HEAD_SHA}...main" --paginate --jq '.files[].filename' | modules_of)
+main_mods=$(gh api "repos/$REPO/compare/${HEAD_SHA}...main" --paginate --jq '.files[] | .filename, (.previous_filename // empty)' | modules_of)
 pr_mods=$(printf '%s\n' $MODULES | sort -u)
 overlap=$(comm -12 <(printf '%s\n' "$pr_mods") <(printf '%s\n' "$main_mods") | tr '\n' ' ' | sed 's/ $//')
 if [ -n "$overlap" ]; then
