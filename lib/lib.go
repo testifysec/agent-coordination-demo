@@ -2,4 +2,4 @@
 package lib
 
 // Mode is the processing mode.
-const Mode = "strict"
+const Mode = "lenient"
