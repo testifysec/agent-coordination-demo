@@ -6,10 +6,20 @@ A second way to run the same model. Instead of a merge queue that tests every me
 
 1. The agent claims its modules (`SKILL.md`), tests under `cilock`, publishes `refs/evidence/<sha>`, and pushes. A draft PR is "not ready" and is ignored. Opening or pushing a ready PR is the signal.
 2. `.github/workflows/land-on-evidence.yml` fires on `pull_request_target` (it runs the copy on main, never the PR's, and executes nothing from the PR). `.land/plan.sh` verifies the evidence with `cilock verify` against the policy on main and computes the PR's modules.
-3. `.land/land.sh`, inside a concurrency group per module, lists the files that landed on main since the PR's merge base. If any is in the same module, it reports a failed `land-on-evidence` check: `overlapping change landed since base; re-run on the new base or stack`. Otherwise it reports a successful check and merges exactly the verified head with `PUT /pulls/{n}/merge` (`merge_method=merge`, `sha=<head>`). No tests run.
+3. `.land/land.sh` takes a lock on every module the PR touches (below), then lists the files that landed on main since the PR's merge base. If any is in the same module, it reports a failed `land-on-evidence` check: `overlapping change landed since base; re-run on the new base or stack`. Otherwise it reports a successful check, merges exactly the verified head with `PUT /pulls/{n}/merge` (`merge_method=merge`, `sha=<head>`), and releases the locks. No tests run.
 4. `.github/workflows/post-land.yml` tests main on a schedule (and on dispatch). Red: it bisects the first-parent commits since the last green run and opens a revert PR. It never pushes to main.
 
 A module is the top-level directory of a changed file. Edit `modules_of` in `.land/plan.sh` and `.land/land.sh` if your layout differs.
+
+## The lock
+
+A lock per module, held from the overlap check through the merge, for every module the PR touches. It is a git ref, not an Actions concurrency group (a group keeps one pending run and cancels the rest, and holds one key).
+
+- Take: `git push --atomic --force-with-lease=refs/locks/m-<module>: origin <commit>:refs/locks/m-<module>`, one lease per module, all modules in one atomic push. The empty expected value means the ref must not exist, so exactly one run wins a module. All or nothing: a run never holds some modules while waiting for others, so there is no deadlock.
+- The lock commit's message names the holder and an expiry (120 s; a landing takes about 10). A crashed run's lock is taken over by compare-and-swap on the exact sha that was read.
+- Wait: retry with 1 to 3 s jitter for up to 300 s. On timeout the `land-on-evidence` check fails with `Could not take the landing lock ... held by: <run>`. Nothing is cancelled silently.
+- Release: delete the refs with a lease on our own sha (also on `EXIT`).
+- It still does not see semantic overlap across modules; that is `post-land`'s job.
 
 ## Settings
 
@@ -24,8 +34,9 @@ All times are wall clock from GitHub's timestamps. The repository is tiny (30 in
 | One ready PR, evidence attached | Opened to merged in 25 s (PR #4), 21 s (#50). |
 | 20 disjoint PRs opened in a 41 s loop (#30 to #49) | 20 of 20 landed. Opened to merged: median 27 s, p90 36 s, max 76 s. First open to last merge: 95 s, about 760 landings an hour while the burst lasted. |
 | Merge contention in that burst | 12 of 20 needed a retry: `405 Base branch was modified`. The worst took 7 attempts against a cap of 8, which is why the cap is now 15 with jitter. Landings in one repository are serialised by GitHub itself at roughly 2 to 3 s each. |
-| 2 PRs in one module, opened 2 s apart (#50, #51) | The first landed in 21 s. The second failed `land-on-evidence` after 28 s: `overlapping change landed since base (m21); re-run on the new base or stack`. |
-| 3 PRs in one module (#52, #53, #54) | The first landed. The second was **cancelled** by the concurrency group (one pending slot) and neither landed nor reported a check; it sits open. The third failed with the overlap message. |
+| 3 PRs in one module, git-ref lock (#62, #63, #64) | #62 landed in 24 s from open. #63 and #64 waited 8 s and 10 s for the lock, then failed with `overlapping change landed since base (m29); re-run on the new base or stack`. None cancelled. (With the old concurrency group: the second was cancelled silently.) |
+| 2 PRs sharing only their second module (#60 touches m23+m24, #61 touches m24+m25) | #60 landed. #61 waited 9 s for `m24`, then failed with the overlap message. Serialised, no race. (With the old group the two held different keys, m23 and m24, and could race.) |
+| 20 disjoint PRs again with the lock (#65 to #84), opened in a 43 s loop | 20 of 20 landed. Opened to merged: median 30 s, p90 47 s, max 58 s; first open to last merge 83 s (about 870 an hour in the burst). Taking the lock cost 1 to 3 s per PR. 12 of 20 still retried the merge (`405 Base branch was modified`), the worst 8 times before landing, under a cap of 15. |
 | Cross-module break (#55 lib, #56 api) | Both verified, both disjoint, both landed (23 s and 26 s). Main was red at 18:03:01. A manual dispatch of `post-land` at 18:03:41 found it, bisected to #56, and opened revert PR #57 at 18:04:05 (22 s run). Evidence for the revert and a dispatch of the land workflow: merged 18:04:57. Main green again at the next `post-land` run, 18:06:18. About 2 minutes from break to revert merged, with a person-or-agent doing the dispatches. |
 | `post-land` on the schedule | The `*/15` cron fired once at 17:50:04 in the first 25 minutes (the 17:45 slot ran 5 minutes late; the 18:00 slot had not run by 18:05). Treat the schedule as a backstop, not a detector. |
 
@@ -38,6 +49,6 @@ All times are wall clock from GitHub's timestamps. The repository is tiny (30 in
 ## What it cannot do
 
 - **Production setup needs a GitHub App.** The merge here uses the workflow's `GITHUB_TOKEN`. A merge made with it does not trigger other workflows (so `post-land` runs on its schedule, not on the push), and the required check is pinned only to "the GitHub Actions app", which any workflow in the repository can post as. A GitHub App installation token fixes both: pin the check to the App's id, and its merges trigger `push`. Creating the App and storing its private key is a human step. Nothing here does it.
-- **Concurrency groups hold one lock.** A PR touching two modules is serialised on the first one alphabetically only. Two PRs that share only the second module can race. GitHub keeps one running and one pending run per group, so a third PR waiting on one module cancels the second; it never lands and must be re-triggered.
+- **The lock is advisory in the same way as every other lock here.** It protects landings made by this workflow. A human with merge rights who merges another way bypasses it; the ruleset's required check is what stops that, and with the default token that check is only pinned to "the GitHub Actions app".
 - **Module overlap is not semantic overlap.** Two PRs in different modules can pass their own tests and break each other. Only the post-land test finds that, after the fact.
 - **Evidence still names a commit.** A new push needs new evidence.
