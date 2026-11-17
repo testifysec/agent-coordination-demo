@@ -1,0 +1,79 @@
+# .github/workflows/land-on-evidence.yml
+#
+# Lands a pull request on main when signed evidence says its tests passed, and no
+# change to the same module landed since its base. No merge queue, no test run.
+#
+# Trigger: the push itself. Opened / synchronize / ready_for_review / reopened.
+# A draft is "not ready" and is skipped; that is the only intent signal.
+# The agent's order is: test under cilock -> publish evidence -> push. So the evidence
+# exists when this fires.
+#
+# pull_request_target runs THIS file from main, never the PR's copy, and nothing here
+# executes code from the PR. It reads evidence as data and merges through the REST API.
+name: land on evidence
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, ready_for_review, reopened]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: "PR number (empty: every open, ready PR)"
+        required: false
+
+permissions:
+  contents: write        # PUT /pulls/{n}/merge
+  pull-requests: write
+  checks: write          # the land-on-evidence check run
+
+env:
+  CILOCK_VERSION: 4.10.0
+  CILOCK_SHA256: 639254767e8affb827a69ec753574ff991956e5388287bd1498d2fa0532c76aa
+  GH_TOKEN: ${{ github.token }}   # see SETTINGS.md: swap for a GitHub App installation token
+  REPO: ${{ github.repository }}
+
+jobs:
+  plan:
+    if: ${{ github.event_name != 'pull_request_target' || github.event.pull_request.draft == false }}
+    runs-on: ubuntu-latest
+    outputs:
+      prs: ${{ steps.plan.outputs.prs }}
+    steps:
+      # Trusted code: main for push and dispatch, the BASE branch for pull_request_target.
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Install cilock
+        run: |
+          curl -fsSLo cilock.tgz "https://cilock.dev/dl/v${CILOCK_VERSION}/cilock-${CILOCK_VERSION}-linux-amd64.tar.gz"
+          echo "${CILOCK_SHA256}  cilock.tgz" | sha256sum -c -
+          mkdir -p "$HOME/.local/bin" && tar -xzf cilock.tgz -C "$HOME/.local/bin" cilock && rm cilock.tgz
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - id: plan
+        env:
+          PR_EVENT: ${{ github.event.pull_request.number }}
+          PR_INPUT: ${{ inputs.pr }}
+        run: .land/plan.sh
+
+  land:
+    needs: plan
+    if: ${{ needs.plan.outputs.prs != '' && needs.plan.outputs.prs != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.prs) }}
+    # One landing at a time per module. cancel-in-progress stays false, but GitHub keeps
+    # only ONE pending run per group: a third PR waiting on the same module cancels the second.
+    concurrency:
+      group: land-${{ matrix.group }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - env:
+          PR: ${{ matrix.pr }}
+          HEAD_SHA: ${{ matrix.head }}
+          VERIFIED: ${{ matrix.verified }}
+          MODULES: ${{ matrix.modules }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: .land/land.sh

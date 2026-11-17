@@ -1,0 +1,38 @@
+# .github/workflows/post-land.yml
+#
+# Landing runs no tests, so main is tested here, after the fact. If main is red, bisect the
+# commits since the last green run and open a revert PR for the first bad one. It never
+# pushes to main.
+#
+# Triggers: a schedule, a manual dispatch, and push to main. A merge made with the default
+# GITHUB_TOKEN does NOT start a push workflow, so on that token only the schedule and the
+# dispatch fire. With a GitHub App installation token doing the merge, push fires too.
+name: post-land
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write         # push the revert branch (never main)
+  pull-requests: write    # open the revert PR; needs Settings > Actions > "Allow GitHub Actions to create and approve pull requests"
+  actions: read           # find the last green run
+
+concurrency:
+  group: post-land
+  cancel-in-progress: false
+
+jobs:
+  test-main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: main
+          fetch-depth: 0
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: .land/post-land.sh
