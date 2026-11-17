@@ -1,0 +1,6 @@
+name = "merge-queue-speed-limit"
+version = "0.1.0"
+defaultTargets = ["MergeQueueSpeedLimit"]
+
+[[lean_lib]]
+name = "MergeQueueSpeedLimit"
