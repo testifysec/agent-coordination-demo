@@ -36,7 +36,9 @@ env:
 
 jobs:
   plan:
-    if: ${{ github.event_name != 'pull_request_target' || github.event.pull_request.draft == false }}
+    # No `if:` on drafts. plan.sh skips them. A job skipped by `if:` makes this workflow run's
+    # check suite "skipped", and a check run the land job later adds to that suite (same head
+    # SHA) is not counted by the required-check rule: the merge answers "land-on-evidence is expected".
     runs-on: ubuntu-latest
     outputs:
       prs: ${{ steps.plan.outputs.prs }}
