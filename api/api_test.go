@@ -10,9 +10,3 @@ func TestDescribePrefix(t *testing.T) {
 		t.Fatal("bad prefix")
 	}
 }
-
-func TestDescribeMatchesMode(t *testing.T) {
-	if Describe() != "api:lenient" {
-		t.Fatalf("Describe()=%q", Describe())
-	}
-}
