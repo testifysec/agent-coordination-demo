@@ -33,7 +33,7 @@ for pr in $LIST; do
     fi
   fi
 
-  files=$(gh api "repos/$REPO/pulls/$pr/files" --paginate --jq '.[].filename')
+  files=$(gh api "repos/$REPO/pulls/$pr/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)')
   mods=$(modules_of <<<"$files" | tr '\n' ' ' | sed 's/ $//')
   # One concurrency group per module; the alphabetically first module names the group.
   # An empty footprint is unknown, so it serialises on the whole repo.
