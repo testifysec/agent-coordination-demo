@@ -36,9 +36,10 @@ env:
 
 jobs:
   plan:
-    # No `if:` on drafts. plan.sh skips them. A job skipped by `if:` makes this workflow run's
-    # check suite "skipped", and a check run the land job later adds to that suite (same head
-    # SHA) is not counted by the required-check rule: the merge answers "land-on-evidence is expected".
+    # plan.sh skips drafts; the job itself always runs. Known limit with the default
+    # GITHUB_TOKEN: a PR opened as a draft and later marked ready never lands, because the
+    # land-on-evidence check run it creates is not counted by the required-check rule ("is
+    # expected"). PRs opened ready land. Cause not established; see LAND.md.
     runs-on: ubuntu-latest
     outputs:
       prs: ${{ steps.plan.outputs.prs }}
