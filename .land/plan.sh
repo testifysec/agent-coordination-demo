@@ -9,13 +9,13 @@ modules_of() { awk -F/ '{ if (NF > 1) print $1; else print "(root)" }' | sort -u
 
 if [ -n "${PR_EVENT:-}" ]; then LIST=$PR_EVENT
 elif [ -n "${PR_INPUT:-}" ]; then LIST=$PR_INPUT
-else LIST=$(gh pr list --repo "$REPO" --state open --base main --json number,isDraft --jq '.[]|select(.isDraft|not)|.number')
+else LIST=$(gh pr list --repo "$REPO" --state open --base land-b --json number,isDraft --jq '.[]|select(.isDraft|not)|.number')
 fi
 
 out='[]'
 for pr in $LIST; do
   info=$(gh pr view "$pr" --repo "$REPO" --json headRefOid,state,isDraft,baseRefName) || continue
-  [ "$(jq -r .baseRefName <<<"$info")" = main ] || continue
+  [ "$(jq -r .baseRefName <<<"$info")" = land-b ] || continue
   draft=$(jq -r .isDraft <<<"$info")
   # A single PR named by an event or an input is always reported, draft or not: the land-on-evidence
   # job fails a draft, so a draft shows a red required check instead of no check. The list mode

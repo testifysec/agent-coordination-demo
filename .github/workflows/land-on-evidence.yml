@@ -21,7 +21,7 @@ on:
   pull_request_target:
     types: [opened, synchronize, ready_for_review, reopened]
   push:
-    branches: [main]
+    branches: [land-b]
   workflow_dispatch:
     inputs:
       pr:
@@ -66,7 +66,7 @@ jobs:
     needs: plan
     # No skipping on a missing plan: a skipped job counts as passing for a required check.
     # An absent or failed plan fails the job in the first step instead.
-    if: ${{ always() && github.event_name == 'pull_request_target' && github.event.pull_request.base.ref == 'main' }}
+    if: ${{ always() && github.event_name == 'pull_request_target' && github.event.pull_request.base.ref == 'land-b' }}
     runs-on: ubuntu-latest
     outputs:
       proceed: ${{ steps.check.outputs.proceed }}

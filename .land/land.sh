@@ -109,7 +109,7 @@ check() { # sets nothing; exit 0 = this head may land, locks held
     "Waited ${LOCK_WAIT}s for module lock(s) held by:${BLOCKED_BY}. Nothing was merged. Push again or re-run."
   echo "locked [$mods_sorted] after $(( $(date +%s) - t_lock ))s"
 
-  main_mods=$(gh api "repos/$REPO/compare/${HEAD_SHA}...main" --paginate \
+  main_mods=$(gh api "repos/$REPO/compare/${HEAD_SHA}...land-b" --paginate \
     --jq '.files[] | .filename, (.previous_filename // empty)' | modules_of)
   overlap=$(comm -12 <(printf '%s\n' $mods_sorted) <(printf '%s\n' "$main_mods") | tr '\n' ' ' | sed 's/ $//')
   if [ -n "$overlap" ]; then
