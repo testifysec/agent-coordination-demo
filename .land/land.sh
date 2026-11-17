@@ -15,6 +15,7 @@
 # run's lock is taken over by compare-and-swap on the sha that was read. Contention waits with
 # jitter up to LOCK_WAIT seconds, then fails. Nothing is cancelled silently.
 set -uf   # -f: module names are never globbed
+BASE=${BASE:-main}
 LOCK_WAIT=${LOCK_WAIT:-300}    # seconds to wait for the modules
 LOCK_LEASE=${LOCK_LEASE:-120}  # seconds a lock stays valid; a landing takes about 10
 export GIT_AUTHOR_NAME=land GIT_AUTHOR_EMAIL=land@users.noreply.github.com
@@ -109,7 +110,7 @@ check() { # sets nothing; exit 0 = this head may land, locks held
     "Waited ${LOCK_WAIT}s for module lock(s) held by:${BLOCKED_BY}. Nothing was merged. Push again or re-run."
   echo "locked [$mods_sorted] after $(( $(date +%s) - t_lock ))s"
 
-  main_mods=$(gh api "repos/$REPO/compare/${HEAD_SHA}...land-b" --paginate \
+  main_mods=$(gh api "repos/$REPO/compare/${HEAD_SHA}...${BASE}" --paginate \
     --jq '.files[] | .filename, (.previous_filename // empty)' | modules_of)
   overlap=$(comm -12 <(printf '%s\n' $mods_sorted) <(printf '%s\n' "$main_mods") | tr '\n' ' ' | sed 's/ $//')
   if [ -n "$overlap" ]; then
