@@ -10,3 +10,9 @@ func TestDescribePrefix(t *testing.T) {
 		t.Fatal("bad prefix")
 	}
 }
+
+func TestDescribeIsStrict(t *testing.T) {
+	if Describe() != "api:strict" {
+		t.Fatalf("Describe()=%q, want api:strict", Describe())
+	}
+}
