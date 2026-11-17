@@ -38,16 +38,20 @@ env:
   CILOCK_SHA256: 639254767e8affb827a69ec753574ff991956e5388287bd1498d2fa0532c76aa
   GH_TOKEN: ${{ github.token }}   # see SETTINGS.md: swap for a GitHub App installation token
   REPO: ${{ github.repository }}
+  BASE: ${{ github.event.pull_request.base.ref || github.ref_name }}   # the branch this run lands on
   RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
 jobs:
   plan:
+    if: ${{ contains(fromJSON(vars.LAND_BRANCHES || '["main"]'), github.event.pull_request.base.ref || github.ref_name) }}
     runs-on: ubuntu-latest
     outputs:
       prs: ${{ steps.plan.outputs.prs }}
     steps:
       # Trusted code: main for push and dispatch, the BASE branch for pull_request_target.
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ github.event.pull_request.base.ref || github.ref_name }}
       - name: Install cilock
         run: |
           curl -fsSLo cilock.tgz "https://cilock.dev/dl/v${CILOCK_VERSION}/cilock-${CILOCK_VERSION}-linux-amd64.tar.gz"
@@ -66,12 +70,14 @@ jobs:
     needs: plan
     # No skipping on a missing plan: a skipped job counts as passing for a required check.
     # An absent or failed plan fails the job in the first step instead.
-    if: ${{ always() && github.event_name == 'pull_request_target' && github.event.pull_request.base.ref == 'main' }}
+    if: ${{ always() && github.event_name == 'pull_request_target' && contains(fromJSON(vars.LAND_BRANCHES || '["main"]'), github.event.pull_request.base.ref || github.ref_name) }}
     runs-on: ubuntu-latest
     outputs:
       proceed: ${{ steps.check.outputs.proceed }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ github.event.pull_request.base.ref || github.ref_name }}
       - id: check
         env:
           PLAN: ${{ needs.plan.result }}
@@ -92,6 +98,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ github.event.pull_request.base.ref || github.ref_name }}
       - env:
           PRS: ${{ needs.plan.outputs.prs }}
         run: |
@@ -106,6 +114,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ github.event.pull_request.base.ref || github.ref_name }}
       - env:
           PRS: ${{ needs.plan.outputs.prs }}
         run: |
@@ -124,6 +134,8 @@ jobs:
         include: ${{ fromJSON(needs.plan.outputs.prs) }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ github.event.pull_request.base.ref || github.ref_name }}
       - env:
           PR: ${{ matrix.pr }}
           HEAD_SHA: ${{ matrix.head }}
