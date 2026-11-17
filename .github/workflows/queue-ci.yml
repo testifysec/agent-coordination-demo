@@ -1,0 +1,19 @@
+name: queue-ci
+on:
+  pull_request:
+    branches: [main-queue]
+  merge_group:
+permissions:
+  contents: write
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    env:
+      KIND: ${{ github.event_name }}
+      POOL: ${{ github.event_name == 'pull_request' && 'ci' || 'mq' }}
+      SIZE: ${{ github.event_name == 'pull_request' && vars.POOL_CI || vars.POOL_MQ }}
+      RUNTAG: ${{ vars.RUNTAG }}
+      T: ${{ vars.T }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - run: .exp/test-job.sh
