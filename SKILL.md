@@ -151,6 +151,8 @@ If the repository lands on evidence (see `LAND.md`), there is no label and no me
 
 CI verifies the evidence for the head commit and skips its own test job when it passes. If it does not verify, CI runs the tests. Either way the required check is `ci`. The merge queue always runs the full suite once on the merged result.
 
+In a merge-queue repository only (not land on evidence, which merges for you):
+
 ```sh
 gh pr merge --auto
 ```

@@ -122,7 +122,13 @@ check() { # sets nothing; exit 0 = this head may land, locks held
 
 case "${1:-}" in
   check)   check ;;
-  merge)   trap release_mine EXIT; merge_head || fail "Merge failed" "Verified, but the merge failed after 15 attempts." ;;
+  merge)
+    trap release_mine EXIT
+    if ! merge_head; then
+      # Two runs can be live for one head (opened, then ready_for_review a moment later); the other one won.
+      [ "$(gh pr view "$PR" --repo "$REPO" --json state --jq .state)" = MERGED ] && { echo "PR #$PR was merged by another run"; exit 0; }
+      fail "Merge failed" "Verified, but the merge failed after 15 attempts."
+    fi ;;
   release) release_mine ;;
   all)
     trap release_mine EXIT
