@@ -66,11 +66,8 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(needs.plan.outputs.prs) }}
-    # One landing at a time per module. cancel-in-progress stays false, but GitHub keeps
-    # only ONE pending run per group: a third PR waiting on the same module cancels the second.
-    concurrency:
-      group: land-${{ matrix.group }}
-      cancel-in-progress: false
+    # No concurrency group: it cannot be a lock (one pending run per group, the rest cancelled).
+    # The lock is the git-ref lock in .land/land.sh.
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - env:
