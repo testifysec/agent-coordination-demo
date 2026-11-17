@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # For each candidate PR: is it open, ready, aimed at main? Does its head carry evidence that
 # verifies against the policy on main? Which modules does it touch? Writes one JSON array to
-# $GITHUB_OUTPUT as prs=[{pr,head,verified,group,modules}].
+# $GITHUB_OUTPUT as prs=[{pr,head,verified,modules}].
 # A module is the top-level directory of a changed file ("(root)" for files at the top).
 set -u
 
@@ -35,13 +35,8 @@ for pr in $LIST; do
 
   files=$(gh api "repos/$REPO/pulls/$pr/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)')
   mods=$(modules_of <<<"$files" | tr '\n' ' ' | sed 's/ $//')
-  # One concurrency group per module; the alphabetically first module names the group.
-  # An empty footprint is unknown, so it serialises on the whole repo.
-  group=$(printf '%s' "${mods%% *}" | tr -c 'A-Za-z0-9._-' '_')
-  [ -n "$group" ] || group=repo
-
-  echo "PR #$pr head=${head:0:10} verified=$verified modules=[$mods] group=$group"
-  out=$(jq -c --arg pr "$pr" --arg head "$head" --arg v "$verified" --arg g "$group" --arg m "$mods" \
-        '. + [{pr:$pr,head:$head,verified:$v,group:$g,modules:$m}]' <<<"$out")
+  echo "PR #$pr head=${head:0:10} verified=$verified modules=[$mods]"
+  out=$(jq -c --arg pr "$pr" --arg head "$head" --arg v "$verified" --arg m "$mods" \
+        '. + [{pr:$pr,head:$head,verified:$v,modules:$m}]' <<<"$out")
 done
 echo "prs=$out" >> "$GITHUB_OUTPUT"
