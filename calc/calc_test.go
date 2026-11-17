@@ -16,3 +16,9 @@ func TestSub(t *testing.T) {
 		t.Fatalf("Sub(5,3)=%d, want 2", got)
 	}
 }
+
+func TestMul(t *testing.T) {
+	if got := Mul(4, 3); got != 12 {
+		t.Fatalf("Mul(4,3)=%d, want 12", got)
+	}
+}
