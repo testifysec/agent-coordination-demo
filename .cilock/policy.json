@@ -1,0 +1,34 @@
+{
+  "expires": "2027-11-17T17:21:11Z",
+  "publickeys": {
+    "d424b05e27010b576d0b980b6a9a2e547ef9e38f873948af5c41d889988247fc": {
+      "keyid": "d424b05e27010b576d0b980b6a9a2e547ef9e38f873948af5c41d889988247fc",
+      "key": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFYStOYjBHODhsU2cxRThaVXJieDMrYVNXZU5UMgo4a1E3MCtjdTdTQVhFZ0FxR1QvS2IvdFdrZGFXUWxCTjlrSG9lNGM4L1QxYmV4dWswczV1Vm8wQlR3PT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg=="
+    }
+  },
+  "steps": {
+    "test": {
+      "name": "test",
+      "functionaries": [
+        {
+          "type": "publickey",
+          "publickeyid": "d424b05e27010b576d0b980b6a9a2e547ef9e38f873948af5c41d889988247fc"
+        }
+      ],
+      "attestations": [
+        {
+          "type": "https://aflock.ai/attestations/command-run/v0.2",
+          "regopolicies": [
+            {
+              "name": "tests-ran-and-passed",
+              "module": "cGFja2FnZSBjb29yZGtpdC50ZXN0c19yYW5fYW5kX3Bhc3NlZAoKIyBSZWdvVjAgc3ludGF4OiBjaWxvY2sncyBldmFsdWF0b3IgcGFyc2VzIGBkZW55W21zZ10geyAuLi4gfWAuCiMgSW5wdXQgaXMgdGhlIGNvbW1hbmQtcnVuL3YwLjIgcHJlZGljYXRlIG9mIHRoZSBzdGVwIG5hbWVkICJ0ZXN0Ii4KIyBFZGl0IGBleHBlY3RlZF9jbWRgIGFuZCB0aGUgb3V0cHV0IGNoZWNrcyB0byBtYXRjaCB5b3VyIHRlc3QgY29tbWFuZC4KCmV4cGVjdGVkX2NtZCA6PSBbImdvIiwgInRlc3QiLCAiLi8uLi4iXQoKcmVhZGFibGVfZXhpdCB7IGlzX251bWJlcihpbnB1dC5leGl0Y29kZSkgfQoKZGVueVttc2ddIHsKCW5vdCByZWFkYWJsZV9leGl0Cgltc2cgOj0gInVucmVhZGFibGUgZXZpZGVuY2U6IGNvbW1hbmQtcnVuIGhhcyBubyBudW1lcmljIGV4aXRjb2RlIgp9CgpkZW55W21zZ10gewoJcmVhZGFibGVfZXhpdAoJaW5wdXQuZXhpdGNvZGUgIT0gMAoJbXNnIDo9IHNwcmludGYoInRlc3RzIGV4aXRlZCAldiwgbm90IDAiLCBbaW5wdXQuZXhpdGNvZGVdKQp9CgojIFRoZSBydW4gbXVzdCBiZSB0aGUgcmVhbCB0ZXN0IGNvbW1hbmQsIG5vdCBgdHJ1ZWAgb3IgYGdvIHRlc3QgLXJ1biBOb1N1Y2hgLgpkZW55W21zZ10gewoJbm90IGlucHV0LmNtZCA9PSBleHBlY3RlZF9jbWQKCW1zZyA6PSBzcHJpbnRmKCJzdGVwIHJhbiAldiwgZXhwZWN0ZWQgJXYiLCBbaW5wdXQuY21kLCBleHBlY3RlZF9jbWRdKQp9CgojICJvayAgPHBrZz4iIG1lYW5zIGEgcGFja2FnZSdzIHRlc3RzIHJhbi4gIm5vIHRlc3RzIHRvIHJ1biIgbWVhbnMgdGhleSBkaWQgbm90LgpkZW55W21zZ10gewoJbm90IGNvbnRhaW5zKG9iamVjdC5nZXQoaW5wdXQsICJzdGRvdXQiLCAiIiksICJvayAgXHQiKQoJbXNnIDo9ICJnbyB0ZXN0IG91dHB1dCBoYXMgbm8gcGFzc2luZyBwYWNrYWdlIGxpbmUiCn0KCmRlbnlbbXNnXSB7Cgljb250YWlucyhvYmplY3QuZ2V0KGlucHV0LCAic3Rkb3V0IiwgIiIpLCAibm8gdGVzdHMgdG8gcnVuIikKCW1zZyA6PSAiZ28gdGVzdCByZXBvcnRlZCBubyB0ZXN0cyB0byBydW4iCn0K"
+            }
+          ]
+        },
+        {
+          "type": "https://aflock.ai/attestations/git/v0.1"
+        }
+      ]
+    }
+  }
+}

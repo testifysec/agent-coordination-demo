@@ -1,0 +1,114 @@
+# .github/workflows/evidence-gate.yml
+#
+# Verify-then-skip. On a pull request, look for signed evidence that the tests
+# passed on this exact head commit. If cilock verifies it against the policy,
+# skip the test job. If anything is missing or wrong, run the tests (fail closed).
+# In the merge queue the tests always run: the merged commit is new and no agent
+# ever tested it.
+#
+# Evidence travels as a git ref, refs/evidence/<head-sha>, pushed by the agent
+# next to its branch. No platform account, no secrets, no id-token.
+name: evidence gate
+
+on:
+  pull_request:
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+env:
+  # Pin the binary AND its hash. Hash from https://cilock.dev/dl/manifest.json (v4.10.0, 2026-11-12).
+  CILOCK_VERSION: 4.10.0
+  CILOCK_SHA256: 639254767e8affb827a69ec753574ff991956e5388287bd1498d2fa0532c76aa
+
+jobs:
+  admit:
+    # Only PRs can be admitted by evidence. merge_group skips this job and runs the tests.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      admitted: ${{ steps.verify.outputs.admitted }}
+    steps:
+      # Check out the PR's BASE commit, not the PR. The policy and the key it trusts
+      # come from the base, so a pull request cannot admit itself by editing either.
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+
+      - name: Install cilock
+        run: |
+          curl -fsSLo cilock.tgz "https://cilock.dev/dl/v${CILOCK_VERSION}/cilock-${CILOCK_VERSION}-linux-amd64.tar.gz"
+          echo "${CILOCK_SHA256}  cilock.tgz" | sha256sum -c -
+          mkdir -p "$HOME/.local/bin"
+          tar -xzf cilock.tgz -C "$HOME/.local/bin" cilock
+          rm cilock.tgz
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - id: verify
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -u
+          echo "admitted=false" >> "$GITHUB_OUTPUT"
+
+          if [ ! -f .cilock/policy.signed.json ] || [ ! -f .cilock/policy.pub ]; then
+            echo "::notice::no signed policy at the base commit; running the tests"
+            exit 0
+          fi
+
+          # The agent pushes evidence to refs/evidence/<head-sha>. A fork PR has none here.
+          if ! git fetch --depth=1 origin "refs/evidence/${HEAD_SHA}"; then
+            echo "::notice::no evidence ref for ${HEAD_SHA}; running the tests"
+            exit 0
+          fi
+          git show FETCH_HEAD:evidence.json > "$RUNNER_TEMP/evidence.json"
+
+          # Gate on cilock's exit code. Never pipe verify: the pipe's status would hide a failure.
+          if cilock verify \
+              -p .cilock/policy.signed.json -k .cilock/policy.pub \
+              -a "$RUNNER_TEMP/evidence.json" \
+              --subjects "sha1:${HEAD_SHA}" \
+              --platform-url "" \
+              --format json > "$RUNNER_TEMP/verdict.json" 2> "$RUNNER_TEMP/verify.err"; then
+            if [ "$(jq -r '.passed' "$RUNNER_TEMP/verdict.json")" = "true" ]; then
+              echo "admitted=true" >> "$GITHUB_OUTPUT"
+              echo "::notice::${HEAD_SHA} carries verified passing test evidence; skipping the tests"
+            fi
+          else
+            grep -E 'collection rejected|no passed collections|failed to' "$RUNNER_TEMP/verify.err" || true
+            echo "::notice::evidence for ${HEAD_SHA} did not verify; running the tests"
+          fi
+
+  test:
+    needs: admit
+    # always(): still evaluate when admit was skipped (merge_group) or failed.
+    # Fail closed: only an explicit admitted=true on a pull_request skips the tests.
+    if: ${{ always() && (github.event_name == 'merge_group' || needs.admit.outputs.admitted != 'true') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      # ubuntu-latest ships Go. Replace this step with your own test command.
+      # Keep it the same command the agent runs under `cilock run` (see .cilock/policy.rego).
+      - run: go test ./...
+
+  # The ONE required status check. A skipped test job is fine only when admit
+  # succeeded and said admitted=true; otherwise the tests must have passed.
+  ci:
+    needs: [admit, test]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          EVENT: ${{ github.event_name }}
+          ADMIT: ${{ needs.admit.result }}
+          ADMITTED: ${{ needs.admit.outputs.admitted }}
+          TEST: ${{ needs.test.result }}
+        run: |
+          echo "event=$EVENT admit=$ADMIT admitted=$ADMITTED test=$TEST"
+          if [ "$TEST" = "success" ]; then exit 0; fi
+          if [ "$EVENT" = "pull_request" ] && [ "$TEST" = "skipped" ] \
+             && [ "$ADMIT" = "success" ] && [ "$ADMITTED" = "true" ]; then exit 0; fi
+          echo "::error::tests did not pass and no verified evidence admitted this commit"
+          exit 1
