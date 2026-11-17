@@ -26,6 +26,7 @@ The model in plain words:
 | `.cilock/policy.json`, `.cilock/policy.signed.json`, `.cilock/policy.pub` | **The demo's** policy, its signed copy, and the policy key's public half. You replace all three (below). |
 | `ruleset.land.json` | The branch ruleset for land-on-evidence: required check `land-on-evidence`, no merge queue, no bypass. |
 | `ruleset.json`, `docs/variants/evidence-gate.yml`, `SETTINGS.md` | The merge-queue variant: ruleset (required check `ci`, queue with `HEADGREEN`), workflow, and settings. |
+| `formal/merge-queue-speed-limit/` | The Lean 4 proofs behind the post's arithmetic. Standalone; `lake build` checks them. |
 | `calc/`, `lib/`, `api/`, `m01/` to `m30/` | Tiny Go packages with real tests, so there is something to run. Each top-level directory is a module. |
 
 ## Run it on your own repository
