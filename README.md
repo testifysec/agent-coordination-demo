@@ -10,12 +10,18 @@ The model in plain words:
 4. CI does not run the tests again. It **verifies the record**. If the record is signed by a trusted key, names this commit, and the policy says the tests ran and passed, the test job is skipped. If anything is missing or wrong, the test job runs. When in doubt, CI runs the tests.
 5. The merge queue still runs the full suite once on the merged result, because the merged commit is new and nobody has tested it.
 
+## Two ways to use the model
+
+- **Land on evidence** (what `main` runs now): an Action merges a ready PR when its evidence verifies and no change to the same module landed since its base. No merge queue. See `LAND.md`.
+- **Evidence gate + merge queue**: CI verifies the evidence and skips its test job; the queue still tests the merged result. The workflow is kept at `docs/variants/evidence-gate.yml` (it ran in this repository first; see the pull requests #1 to #3).
+
 ## What is here
 
 | Path | What it is |
 | --- | --- |
 | `SKILL.md` | The agent rules. Paste into Claude Code, Codex, Cursor rules or AGENTS.md. |
-| `.github/workflows/evidence-gate.yml` | The workflow: verify, skip tests if it verifies, always test in the merge queue. |
+| `.github/workflows/land-on-evidence.yml`, `.github/workflows/post-land.yml`, `.land/` | Land on evidence, and the check that tests main afterwards. |
+| `docs/variants/evidence-gate.yml` | The verify-then-skip workflow for a repository that keeps a merge queue. |
 | `.cilock/policy.rego`, `.cilock/make-policy.sh` | The rule and the script that builds the policy. |
 | `.cilock/policy.json`, `.cilock/policy.signed.json`, `.cilock/policy.pub` | The policy, its signed copy, and the policy key's public half. |
 | `ruleset.json` | The branch ruleset: required check `ci`, merge queue with `HEADGREEN`. |
