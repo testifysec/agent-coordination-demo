@@ -35,12 +35,12 @@ report success "Evidence verified, no overlap" "Verified evidence for ${HEAD_SHA
 # Merge exactly the verified head. Concurrent merges to main answer 405/409 ("base branch was
 # modified" or the check not visible yet); retry a few times.
 attempts=0
-until [ $attempts -ge 8 ]; do
+until [ $attempts -ge 15 ]; do
   attempts=$((attempts + 1))
   if resp=$(gh api -X PUT "repos/$REPO/pulls/$PR/merge" -f merge_method=merge -f sha="$HEAD_SHA" 2>&1); then
     echo "LANDED pr=$PR attempts=$attempts at=$(date -u +%FT%TZ)"; exit 0
   fi
   echo "merge attempt $attempts: $(printf '%s' "$resp" | head -c 200)"
-  sleep $((attempts * 2))
+  sleep $((1 + RANDOM % 4))
 done
 echo "::error::PR #$PR verified but the merge failed after $attempts attempts"; exit 1

@@ -147,6 +147,8 @@ If you push a new commit, the old evidence does not apply. Go back to step 3.
 
 ## 5. Land through the normal PR and the evidence check
 
+If the repository lands on evidence (see `LAND.md`), there is no label and no merge queue: opening or pushing a ready PR is the signal, and a draft means "not ready". Push the evidence first, then open the PR ready. Do not open it as a draft and mark it ready later; with the default token that PR never lands. If the check says `overlapping change landed since base`, rebase onto the new base, run step 3 again, and push.
+
 CI verifies the evidence for the head commit and skips its own test job when it passes. If it does not verify, CI runs the tests. Either way the required check is `ci`. The merge queue always runs the full suite once on the merged result.
 
 ```sh
