@@ -15,9 +15,15 @@ fi
 out='[]'
 for pr in $LIST; do
   info=$(gh pr view "$pr" --repo "$REPO" --json headRefOid,state,isDraft,baseRefName) || continue
-  [ "$(jq -r .state <<<"$info")" = OPEN ] || continue
-  [ "$(jq -r .isDraft <<<"$info")" = false ] || continue
   [ "$(jq -r .baseRefName <<<"$info")" = main ] || continue
+  draft=$(jq -r .isDraft <<<"$info")
+  # A single PR named by an event or an input is always reported, draft or not: the land-on-evidence
+  # job fails a draft, so a draft shows a red required check instead of no check. The list mode
+  # (push, dispatch without a number) only ever contains open, ready PRs.
+  if [ -z "${PR_EVENT:-}${PR_INPUT:-}" ]; then
+    [ "$(jq -r .state <<<"$info")" = OPEN ] || continue
+    [ "$draft" = false ] || continue
+  fi
   head=$(jq -r .headRefOid <<<"$info")
 
   verified=false
@@ -36,7 +42,7 @@ for pr in $LIST; do
   files=$(gh api "repos/$REPO/pulls/$pr/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)')
   mods=$(modules_of <<<"$files" | tr '\n' ' ' | sed 's/ $//')
   echo "PR #$pr head=${head:0:10} verified=$verified modules=[$mods]"
-  out=$(jq -c --arg pr "$pr" --arg head "$head" --arg v "$verified" --arg m "$mods" \
-        '. + [{pr:$pr,head:$head,verified:$v,modules:$m}]' <<<"$out")
+  out=$(jq -c --arg pr "$pr" --arg head "$head" --arg v "$verified" --arg d "$draft" --arg m "$mods" \
+        '. + [{pr:$pr,head:$head,verified:$v,draft:$d,modules:$m}]' <<<"$out")
 done
 echo "prs=$out" >> "$GITHUB_OUTPUT"
