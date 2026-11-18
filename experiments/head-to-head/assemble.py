@@ -1,4 +1,4 @@
-"""Assemble results-minimal.json from out/<tag>.metrics.json + tuning.json. Reads no predictions file."""
+"""Assemble results-minimal.json from out/<tag>.metrics.json + tuning.json."""
 import json, os, os
 V = os.environ["EXP_DIR"]
 o = f"{V}/out"
