@@ -1,2 +1,3 @@
 # keys never go in the repo
 *.key
+__pycache__/

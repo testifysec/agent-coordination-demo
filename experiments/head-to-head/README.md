@@ -72,3 +72,23 @@ Runs take 20 to 100 minutes each at T=120 s. Total about 6 hours, mostly waiting
 ## Results from our run (2026-11-17, GitHub-hosted runners, T=120 s)
 
 `results-minimal.json` and `tuning.json` are our numbers. Two harness bugs cost us reruns, and are fixed here: an end-of-run counter that counted every merge on a shared branch (two overlapping runs ended each other early), and a PR listing limit that hid old PRs from the collector.
+
+## Predictions, sealed before the first run
+
+`predictions-minimal.json` was written from the model alone and hashed before any run; `predictions-minimal.sha256` is that hash (`shasum -a 256 -c predictions-minimal.sha256`). The harness never read it. Intervals are 90%.
+
+| Run | Landed/h predicted | Measured | Runner-min/change predicted | Measured |
+| --- | --- | --- | --- | --- |
+| 1a queue, ALLGREEN | 38 to 56 (median 45), hard bound 60 | 56.6, just above | 4.0 to 4.5 | 3.99, just below |
+| 1b queue, HEADGREEN | 52 to 92 (median 82), hard bound 100 | 58.6 | 2.4 to 3.7 | 4.04, outside |
+| 1c agents, land on evidence | 107 to 129 (median 123), bound 120 sustained | 126.1 | 2.0 to 2.2 | 2.03 |
+| 2, one module, M=4 | 19 to 28.5, bound 30 | 22.1 | 2.0 to 2.2 | 2.03 |
+| 2, one module, M=8 | same as M=4 | 21.9 | 2.0 to 2.2 | 2.03 |
+
+The misses, stated plainly:
+
+- 1a ran a little faster and cheaper than predicted because GitHub started jobs in about 2 seconds; the prediction assumed 10 to 30. That latency is a property of the day we ran, not of GitHub.
+- 1b missed on compute. Tuning picked the 2/2 split, which the prediction gave about 10% odds, and with two queue builds in flight GitHub built every entry alone: 40 merge-group runs for 40 PRs, so HEADGREEN never batched and cost the same as ALLGREEN. Its throughput still fell inside the band.
+- 1c is above its 120/h token bound because the middle-80% rate counts landings that arrive in waves; the prediction named this fence-post effect in advance.
+
+Ratios: 1c/1a is 2.23 (predicted 2.0 to 3.4). 1b/1a is 1.04 (predicted 1.0 to 2.4). Doubling machines on one module changed the rate by 0.99x (predicted 0.9 to 1.1).
