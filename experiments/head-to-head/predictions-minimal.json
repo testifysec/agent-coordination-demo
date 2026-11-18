@@ -1,0 +1,54 @@
+{
+  "registered": "2026-11-17, before any run. Source: audit/sim_min.py (400 Monte Carlo draws of the unknown overheads) widened for model gaps, plus closed forms.",
+  "model": "lambda <= (60/T) * min(M/r, S), T = 2.0 min. r = test jobs per landed change; S = independent lanes (cell 2: 1).",
+  "closed_form_hard_bounds_per_h": {
+    "1a": "30 * 4 / 2 = 60 (r = 2: PR CI + one queue build per change)",
+    "1b": "30 * 4 / (1 + 1/g), g = realised group size <= 5, so <= 30*4/1.2 = 100",
+    "1c": "30 * 4 / 1 = 120",
+    "2_M4_and_M8": "30 * 1 = 30 (machine count irrelevant)"
+  },
+  "assumptions": [
+    "Job start latency U(10,30) s per job. It is hidden for jobs that are already started and waiting on a token (PR CI at t=0, agent jobs), and NOT hidden for each merge_group build, which GitHub only creates when a build slot frees.",
+    "Token / claim hand-off polling interval U(3,10) s per run; the waiter sees a release after U(0, interval). Release/claim ref push 1-3 s.",
+    "Test wrapper (cilock or harness) inside the token adds U(2,8) s per test job; the token-held minutes below include it (2.0 + wrapper).",
+    "Land Action: lock U(1,3) s + merge U(2,3) s, serialized; never the binding term (ceiling about 700/h).",
+    "Merge queue: PR CI pass to enqueue U(3,15) s; entry to merge_group workflow trigger U(5,25) s; build pass to group merge U(3,10) s, merged in order. Builds in flight = tokens given to the queue (a slot is held until merge). If the harness sets max_entries_to_build above the queue's token count the start latency partly hides and 1a rises toward its 60/h bound.",
+    "1b: groups of up to 5 are formed from entries waiting when a slot frees (GitHub grouping, one build per group). ALLGREEN (1a) is one entry per group.",
+    "Token split chosen by the 10-PR TUNING run among {1/3, 2/2, 3/1}; modelled as the best whole-run rate. Predicted choice: 1a -> 2/2 (about 100%), 1b -> 3/1 (about 90%), 2/2 (about 10%).",
+    "Cell 2 claim-only: claim CAS 1-3 s; with probability 0.5 the waiting agent's job start latency is not overlapped with the previous test.",
+    "Landed/h is (n-1)/span over the 10th to 90th percentile landings. With constant T and tokens released together, landings arrive in waves; that fence-post effect can push a token-bound cell slightly ABOVE 60*M/T, which is why 1c's interval extends past 120.",
+    "No GitHub rate-limit or abuse throttling, no failures, no cancelled runs, sufficient hosted-runner concurrency (at least 12 concurrent jobs) are assumed. Violations lower every number."
+  ],
+  "predictions": {
+    "1a_queue_allgreen_M4": {
+      "landed_per_h": {"p05": 38, "p50": 45, "p95": 56},
+      "token_minutes_per_landed_change": {"p05": 4.0, "p50": 4.2, "p95": 4.5},
+      "token_split_pr_ci_queue": "2/2"
+    },
+    "1b_queue_headgreen_group5_M4": {
+      "landed_per_h": {"p05": 52, "p50": 82, "p95": 92},
+      "token_minutes_per_landed_change": {"p05": 2.4, "p50": 2.7, "p95": 3.7},
+      "token_split_pr_ci_queue": "3/1 (about 90%), else 2/2",
+      "note": "bimodal: about 84-88/h if the tuning run picks 3/1, about 56/h if it picks 2/2"
+    },
+    "1c_agents_M4": {
+      "landed_per_h": {"p05": 107, "p50": 123, "p95": 129},
+      "token_minutes_per_landed_change": {"p05": 2.0, "p50": 2.1, "p95": 2.2},
+      "note": "median is above the 120/h token bound only because of the wave fence-post effect; the sustained rate is 100-115/h"
+    },
+    "2_claim_only_M4": {
+      "landed_per_h": {"p05": 19, "p50": 24.8, "p95": 28.5},
+      "token_minutes_per_landed_change": {"p05": 2.0, "p50": 2.1, "p95": 2.2}
+    },
+    "2_claim_only_M8": {
+      "landed_per_h": {"p05": 19, "p50": 24.8, "p95": 28.5},
+      "token_minutes_per_landed_change": {"p05": 2.0, "p50": 2.1, "p95": 2.2},
+      "note": "same distribution as M=4: the cell tests that doubling machines does not move a serial lane"
+    }
+  },
+  "derived_claims_to_test": {
+    "1c_over_1a": "about 2.7x (interval 2.0-3.4x), versus the closed-form ratio of 2",
+    "1b_over_1a": "about 1.8x (interval 1.0-2.4x)",
+    "2_M8_over_M4": "1.0 (interval 0.9-1.1)"
+  }
+}
