@@ -36,7 +36,7 @@ permissions:
 env:
   CILOCK_VERSION: 4.10.0
   CILOCK_SHA256: 639254767e8affb827a69ec753574ff991956e5388287bd1498d2fa0532c76aa
-  GH_TOKEN: ${{ github.token }}   # see SETTINGS.md: swap for a GitHub App installation token
+  GH_TOKEN: ${{ github.token }}   # see LAND.md: swap for a GitHub App installation token
   REPO: ${{ github.repository }}
   BASE: ${{ github.event.pull_request.base.ref || github.ref_name }}   # the branch this run lands on
   RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

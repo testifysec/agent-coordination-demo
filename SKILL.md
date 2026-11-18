@@ -11,7 +11,7 @@ Paste this into a Claude Code skill, Codex or Cursor rules, or AGENTS.md. Set th
 # Shell variables the commands below use. Adjust the test command to your repo.
 REMOTE=origin
 ME=$(git config user.name)                 # your handle in claim messages
-CILOCK_KEY=$HOME/.config/cilock/agent.key  # your signing key (see SETTINGS.md)
+CILOCK_KEY=$HOME/.config/cilock/agent.key  # your signing key (see README.md for key generation)
 TEST_CMD='go test ./...'                   # must match expected_cmd in .cilock/policy.rego
 LEASE_MIN=15                               # about one full test run, rounded up
 ```
@@ -167,5 +167,5 @@ Release every claim when the PR merges, closes, or you give up (commands in step
 
 ## What this does not do
 
-- It does not make an agent honest. A file key proves "someone holding this key ran this command on this commit", not which agent or on what machine. For a platform-issued agent identity, see SETTINGS.md.
+- It does not make an agent honest. A file key proves "someone holding this key ran this command on this commit", not which agent or on what machine. For a platform-issued agent identity, see docs/variants/SETTINGS-merge-queue.md, section 5.
 - It does not replace the merge queue. The merged commit is new and is tested once there.
