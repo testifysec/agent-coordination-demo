@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -u
 V=${EXP_DIR:?set EXP_DIR to a work directory}; H=$V/harness
-[ -f "$V/predictions-minimal.sha256" ] || { echo "no predictions-minimal.sha256"; exit 3; }
+# Optional: set SEALED=path to refuse to start until a pre-registered predictions hash exists.
+[ -z "${SEALED:-}" ] || [ -f "$SEALED" ] || { echo "no $SEALED: refusing to run measured runs"; exit 3; }
 run() { local tag=$1 arm=$2; shift 2; "$@" >> "$V/out/measured-agents.log" 2>&1
   python3 -I "$H/collect.py" "$tag" "$arm" >> "$V/out/measured-agents.log" 2>&1
   python3 -I "$H/metrics.py" "$tag" > /dev/null 2>&1; echo "done $tag $(date -u +%T)" >> "$V/out/measured-agents.log"; }

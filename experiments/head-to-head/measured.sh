@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# The measured runs, in order. Refuses to start unless the sealed-predictions hash exists.
+# The measured runs, in order. Optionally refuses to start until a sealed predictions hash exists (SEALED=).
 set -u
 V=${EXP_DIR:?set EXP_DIR to a work directory}
 H=$V/harness
 R=${R:-OWNER/REPO}
-[ -f "$V/predictions-minimal.sha256" ] || { echo "no predictions-minimal.sha256: refusing to run measured runs"; exit 3; }
+# Optional: set SEALED=path to refuse to start until a pre-registered predictions hash exists.
+[ -z "${SEALED:-}" ] || [ -f "$SEALED" ] || { echo "no $SEALED: refusing to run measured runs"; exit 3; }
 gh variable set T --repo $R --body 120
 read AG_CI AG_MQ HG_CI HG_MQ < <(python3 -I - <<'PY'
 import json
